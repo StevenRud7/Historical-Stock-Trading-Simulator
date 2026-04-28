@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MarketReplay — Historical Trading Simulator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet" />
+  <script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════ SETUP SCREEN -->
+<div id="screen-setup" class="screen active">
+  <div class="setup-bg">
+    <div class="ticker-tape" id="tickerTape"></div>
+  </div>
+  <div class="setup-container">
+    <div class="setup-logo">
+      <div class="logo-mark">MR</div>
+      <div class="logo-text">
+        <h1>MarketReplay</h1>
+        <p>Historical Trading Simulator</p>
+      </div>
+    </div>
+
+    <div class="setup-card">
+      <div class="setup-step" id="step-1">
+        <h2 class="step-title"><span class="step-num">01</span> Choose Your Era</h2>
+        <p class="step-desc">Select a historical date range to trade in. Uses real market data.</p>
+
+        <div class="preset-ranges">
+          <button class="preset-btn" data-start="2020-01-02" data-end="2020-12-31">2020 — Covid Crash &amp; Recovery</button>
+          <button class="preset-btn" data-start="2021-01-04" data-end="2021-12-31">2021 — Meme Stock Mania</button>
+          <button class="preset-btn active" data-start="2022-01-03" data-end="2022-12-30">2022 — Bear Market</button>
+          <button class="preset-btn" data-start="2023-01-03" data-end="2023-12-29">2023 — Tech Rebound</button>
+          <button class="preset-btn" data-start="2008-01-02" data-end="2009-12-31">2008–09 — Financial Crisis</button>
+          <button class="preset-btn" data-start="2017-01-03" data-end="2017-12-29">2017 — Bull Run</button>
+        </div>
+
+        <div class="divider-text">or set custom range</div>
+
+        <div class="date-row">
+          <div class="field-group">
+            <label>Start Date</label>
+            <input type="date" id="startDate" value="2022-01-03" min="2000-01-01" max="2024-01-01" />
+          </div>
+          <div class="field-group">
+            <label>End Date</label>
+            <input type="date" id="endDate" value="2022-12-30" min="2000-01-02" max="2024-12-31" />
+          </div>
+        </div>
+      </div>
+
+      <div class="setup-step" id="step-2">
+        <h2 class="step-title"><span class="step-num">02</span> Set Starting Capital</h2>
+        <div class="balance-options">
+          <button class="balance-btn" data-amount="10000">$10K</button>
+          <button class="balance-btn" data-amount="25000">$25K</button>
+          <button class="balance-btn active" data-amount="50000">$50K</button>
+          <button class="balance-btn" data-amount="100000">$100K</button>
+        </div>
+        <div class="field-group" style="margin-top:8px">
+          <label>Custom Amount (min $1,000)</label>
+          <div class="input-prefix-wrap">
+            <span class="input-prefix">$</span>
+            <input type="number" id="initialBalance" value="50000" min="1000" step="1000" />
+          </div>
+        </div>
+      </div>
+
+      <div class="setup-step" id="step-3">
+        <h2 class="step-title"><span class="step-num">03</span> First Stock to Watch</h2>
+        <p class="step-desc">You can add more tickers any time during the game.</p>
+        <div class="ticker-search-wrap">
+          <input type="text" id="startTicker" placeholder="e.g. AAPL, TSLA, SPY…" autocomplete="off" value="AAPL" />
+          <div class="ticker-suggestions" id="setupTickerSuggestions"></div>
+        </div>
+        <div class="popular-tickers">
+          <span class="popular-label">Quick pick:</span>
+          <button class="pop-ticker" data-t="AAPL">AAPL</button>
+          <button class="pop-ticker" data-t="TSLA">TSLA</button>
+          <button class="pop-ticker" data-t="NVDA">NVDA</button>
+          <button class="pop-ticker" data-t="SPY">SPY</button>
+          <button class="pop-ticker" data-t="MSFT">MSFT</button>
+          <button class="pop-ticker" data-t="AMZN">AMZN</button>
+          <button class="pop-ticker" data-t="META">META</button>
+          <button class="pop-ticker" data-t="GOOGL">GOOGL</button>
+        </div>
+      </div>
+
+      <div class="setup-error" id="setupError"></div>
+
+      <button class="btn-start" id="btnStart">
+        <span class="btn-text">Start Simulation →</span>
+        <div class="btn-loading" id="btnStartLoading">
+          <div class="spinner-dark"></div>
+          <span>Fetching market data…</span>
+        </div>
+      </button>
+
+      <button class="btn-howtoplay-setup" id="btnHowToPlaySetup">? How to Play</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ GAME SCREEN -->
+<div id="screen-game" class="screen">
+
+  <!-- Top Bar -->
+  <header class="topbar">
+    <div class="topbar-left">
+      <div class="topbar-logo">MR</div>
+      <div class="date-display">
+        <span class="date-label">TRADING DAY</span>
+        <span class="date-value" id="currentDateDisplay">—</span>
+      </div>
+      <div class="day-counter">
+        <span id="dayCounterText">Day 0 of 0</span>
+        <div class="day-progress-bar"><div class="day-progress-fill" id="dayProgressFill"></div></div>
+      </div>
+    </div>
+    <div class="topbar-center">
+      <div class="portfolio-summary">
+        <div class="ps-item">
+          <span class="ps-label">PORTFOLIO</span>
+          <span class="ps-value" id="topPortfolioValue">$0</span>
+        </div>
+        <div class="ps-divider"></div>
+        <div class="ps-item">
+          <span class="ps-label">CASH</span>
+          <span class="ps-value" id="topCashBalance">$0</span>
+        </div>
+        <div class="ps-divider"></div>
+        <div class="ps-item">
+          <span class="ps-label">P&amp;L</span>
+          <span class="ps-value" id="topPnL">$0</span>
+        </div>
+        <div class="ps-divider"></div>
+        <div class="ps-item">
+          <span class="ps-label">RETURN</span>
+          <span class="ps-value" id="topReturn">0%</span>
+        </div>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <button class="btn-icon-top" id="btnHowToPlay" title="How to Play (?)">?</button>
+      <button class="btn-summary-icon" id="btnViewSummary" title="View current performance summary">📊</button>
+      <button class="btn-topbar-quit" id="btnQuitGame" title="End simulation early and view summary">✕ Quit</button>
+      <button class="btn-topbar-secondary" id="btnFastForward">⏩ Skip Days</button>
+      <button class="btn-primary" id="btnNextDay">Next Day →</button>
+    </div>
+  </header>
+
+  <!-- Keyboard shortcut hint bar -->
+  <div class="shortcut-bar">
+    <span class="shortcut-hint"><kbd>Space</kbd> Next Day</span>
+    <span class="shortcut-hint"><kbd>F</kbd> Fast Forward</span>
+    <span class="shortcut-hint"><kbd>?</kbd> Help</span>
+    <span class="shortcut-hint shortcut-sep">·</span>
+    <span class="shortcut-hint">Click a position card to load its chart &amp; fill the trade form</span>
+  </div>
+
+  <!-- Main 3-panel layout -->
+  <div class="game-layout">
+
+    <!-- LEFT: Portfolio Panel -->
+    <aside class="panel panel-left">
+      <div class="panel-header">
+        <h3>Portfolio</h3>
+        <span class="panel-badge" id="positionCount">0 positions</span>
+      </div>
+      <div class="portfolio-stats">
+        <div class="stat-row">
+          <span>Cash</span>
+          <span id="portCash" class="stat-val">$0</span>
+        </div>
+        <div class="stat-row">
+          <span>Positions Value</span>
+          <span id="portPositionsVal" class="stat-val">$0</span>
+        </div>
+        <div class="stat-row total-row">
+          <span>Total Value</span>
+          <span id="portTotal" class="stat-val highlight">$0</span>
+        </div>
+        <div class="stat-row">
+          <span>Unrealized P&amp;L</span>
+          <span id="portUnrealized" class="stat-val neutral">$0</span>
+        </div>
+        <div class="stat-row">
+          <span>Realized P&amp;L</span>
+          <span id="portRealized" class="stat-val neutral">$0</span>
+        </div>
+        <div class="stat-row">
+          <span>Total Return</span>
+          <span id="portReturn" class="stat-val neutral">0.00%</span>
+        </div>
+      </div>
+
+      <div class="panel-header" style="margin-top:8px">
+        <h3>Open Positions</h3>
+      </div>
+      <div class="positions-list" id="positionsList">
+        <div class="empty-state">No open positions.<br/>Use the trade panel →</div>
+      </div>
+    </aside>
+
+    <!-- CENTER: Chart Panel -->
+    <main class="panel panel-center">
+      <div class="chart-toolbar">
+        <div class="ticker-selector">
+          <span class="ticker-current" id="chartTickerLabel" title="Click to change ticker">AAPL</span>
+          <input type="text" id="chartTickerInput" placeholder="Search…" autocomplete="off" style="display:none" />
+          <div class="ticker-suggestions" id="chartTickerSuggestions"></div>
+        </div>
+        <div class="chart-info">
+          <span class="chart-price" id="chartPrice">$—</span>
+          <span class="chart-change" id="chartChange"></span>
+        </div>
+        <div class="chart-actions">
+          <button class="chart-action-btn" id="btnWatchlist" title="Add ticker to watchlist">+ Watch</button>
+        </div>
+      </div>
+      <div id="chartContainer" class="chart-container"></div>
+      <div class="watchlist-bar" id="watchlistBar"></div>
+    </main>
+
+    <!-- RIGHT: Trade Panel -->
+    <aside class="panel panel-right">
+      <div class="panel-header">
+        <h3>Place Trade</h3>
+        <span class="trade-date-badge" id="tradeDateBadge">—</span>
+      </div>
+      <div class="trade-form">
+        <div class="trade-ticker-row">
+          <div class="field-group" style="flex:1">
+            <label>Ticker Symbol</label>
+            <div class="ticker-search-wrap">
+              <input type="text" id="tradeTicker" placeholder="AAPL" autocomplete="off" />
+              <div class="ticker-suggestions" id="tradeTickerSuggestions"></div>
+            </div>
+          </div>
+          <div class="trade-price-preview">
+            <span class="tp-label">Price</span>
+            <span class="tp-val" id="tradePrice">—</span>
+          </div>
+        </div>
+
+        <div class="action-tabs">
+          <button class="action-tab buy active"  data-action="BUY">BUY</button>
+          <button class="action-tab sell"         data-action="SELL">SELL</button>
+          <button class="action-tab short"        data-action="SHORT">SHORT</button>
+          <button class="action-tab cover"        data-action="COVER">COVER</button>
+        </div>
+
+        <div class="action-hint" id="actionHint">📈 Buy shares — profit when price rises above your cost.</div>
+
+        <div class="field-group">
+          <div class="qty-label-row">
+            <label>Shares</label>
+            <button class="btn-max-shares" id="btnMaxShares" title="Set max affordable quantity">Max</button>
+          </div>
+          <div class="qty-row">
+            <button class="qty-btn" data-delta="-10">−10</button>
+            <button class="qty-btn" data-delta="-1">−1</button>
+            <input type="number" id="tradeQty" value="1" min="0.01" step="0.01" />
+            <button class="qty-btn" data-delta="1">+1</button>
+            <button class="qty-btn" data-delta="10">+10</button>
+          </div>
+        </div>
+
+        <div class="trade-cost-preview">
+          <div class="tcp-row">
+            <span>Estimated Cost</span>
+            <span id="tradeCost">—</span>
+          </div>
+          <div class="tcp-row">
+            <span>Cash After Trade</span>
+            <span id="tradeCashAfter">—</span>
+          </div>
+        </div>
+
+        <button class="btn-execute-trade" id="btnExecuteTrade">Buy Shares</button>
+        <div class="trade-feedback" id="tradeFeedback"></div>
+      </div>
+
+      <!-- Trade History -->
+      <div class="panel-header" style="margin-top:8px">
+        <h3>Trade Log</h3>
+        <span class="panel-badge" id="tradeCount">0 trades</span>
+      </div>
+      <div class="trade-history" id="tradeHistory">
+        <div class="empty-state">No trades yet.</div>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ GAME OVER SCREEN -->
+<div id="screen-gameover" class="screen">
+  <div class="gameover-container">
+    <div class="gameover-header" id="gameoverHeader">
+      <div class="gameover-icon">🏆</div>
+      <h1 id="gameoverTitle">Simulation Complete</h1>
+      <p id="gameoverSubtitle">Here's how you did.</p>
+    </div>
+    <div class="summary-grid" id="summaryGrid"></div>
+    <div class="summary-open-positions" id="summaryOpenPositions"></div>
+    <div class="highlight-trades" id="highlightTrades"></div>
+    <div class="summary-charts-section" id="summaryChartsSection">
+      <div class="summary-charts-header">
+        <h3>Portfolio Charts <span class="summary-note">(full simulation period — buy/sell markers shown)</span></h3>
+        <div class="summary-chart-tabs" id="summaryChartTabs"></div>
+      </div>
+      <div class="summary-chart-container" id="summaryChartContainer">
+        <div class="sc-ticker-label" id="scCurrentTicker"></div>
+        <div class="summary-chart-loading" id="summaryChartLoading">Loading charts…</div>
+      </div>
+      <div class="sc-legend">
+        <span class="sc-legend-item"><span class="sc-legend-dot" style="background:#3ecf8e"></span>BUY ↑</span>
+        <span class="sc-legend-item"><span class="sc-legend-dot" style="background:#e85d7a"></span>SELL ↓</span>
+        <span class="sc-legend-item"><span class="sc-legend-dot" style="background:#e8a43a"></span>SHORT ↓</span>
+        <span class="sc-legend-item"><span class="sc-legend-dot" style="background:#a78bfa"></span>COVER ↑</span>
+        <span style="margin-left:auto">★ = most traded ticker</span>
+      </div>
+    </div>
+    <div class="summary-trades">
+      <h3>Full Trade History</h3>
+      <div class="summary-table-wrap">
+        <table class="summary-table" id="summaryTable">
+          <thead>
+            <tr>
+              <th>Date</th><th>Ticker</th><th>Action</th>
+              <th>Qty</th><th>Price</th><th>Total</th><th>P&amp;L</th>
+            </tr>
+          </thead>
+          <tbody id="summaryTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="gameover-actions">
+      <button class="btn-primary btn-large" id="btnPlayAgain">↩ New Game</button>
+      <button class="btn-outline-large" id="btnBackToSetup">⚙ Change Settings</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════ QUIT MODAL -->
+<div class="modal-overlay" id="quitModal">
+  <div class="modal quit-modal">
+    <button class="modal-close" id="quitModalClose">✕</button>
+    <h2 class="modal-title">✕ Quit Simulation</h2>
+    <p class="modal-desc">Are you sure you want to end the simulation early? You will see your full performance summary.</p>
+    <div class="quit-warning">
+      ⚠ All open positions and progress will be finalized. You cannot resume this simulation.
+    </div>
+    <div class="quit-actions">
+      <button class="btn-secondary" id="btnQuitCancel">Keep Playing</button>
+      <button class="btn-danger-confirm" id="btnQuitConfirm">End &amp; See Summary</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════ FAST FORWARD MODAL -->
+<div class="modal-overlay" id="ffModal">
+  <div class="modal ff-modal">
+    <button class="modal-close" id="ffModalClose">✕</button>
+    <h2 class="modal-title">⏩ Fast Forward</h2>
+    <p class="modal-desc">Skip ahead without trading. All held positions update using real historical closing prices for each market open day. You'll receive a full performance report for the skipped period.</p>
+    <div class="ff-days-input">
+      <label>Market Open Days to Skip <span id="ffMaxLabel" style="color:var(--primary);font-size:9px"></span></label>
+      <div class="ff-days-row">
+        <button class="ff-preset" data-days="5">1 Week</button>
+        <button class="ff-preset" data-days="10">2 Weeks</button>
+        <button class="ff-preset" data-days="21">1 Month</button>
+        <button class="ff-preset" data-days="63">3 Months</button>
+      </div>
+      <div class="ff-custom-row">
+        <input type="number" id="ffDays" value="5" min="1" max="365" />
+        <span>market open days</span>
+      </div>
+    </div>
+    <button class="btn-primary btn-ff-execute" id="btnFFExecute">
+      <span id="ffBtnText">Simulate →</span>
+      <span class="btn-loading-inline hidden" id="ffLoading">
+        <span class="spinner-inline"></span> Simulating…
+      </span>
+    </button>
+    <div class="ff-report hidden" id="ffReport"></div>
+  </div>
+</div>
+
+<!-- ═════════════════════════════════════════ TRADE CONFIRM MODAL -->
+<div class="modal-overlay" id="confirmModal">
+  <div class="modal confirm-modal">
+    <h2 class="modal-title">Confirm Trade</h2>
+    <p class="modal-desc">This is a large trade. Please confirm the details below.</p>
+    <div class="confirm-details" id="confirmTradeDetails"></div>
+    <div class="confirm-actions">
+      <button class="btn-secondary" id="btnCancelTrade">Cancel</button>
+      <button class="btn-primary" id="btnConfirmTrade">Confirm &amp; Execute</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════ HOW TO PLAY MODAL -->
+<div class="modal-overlay" id="htpModal">
+  <div class="modal htp-modal">
+    <button class="modal-close" id="htpModalClose">✕</button>
+    <div class="htp-slides" id="htpSlides">
+
+      <div class="htp-slide active">
+        <div class="htp-slide-icon">📈</div>
+        <h2>Welcome to MarketReplay</h2>
+        <p>Trade stocks using <strong>real historical market data</strong>. You pick the time period — then navigate day by day, making buy and sell decisions just like a real trader.</p>
+        <p>Your goal: <strong>grow your portfolio</strong> before the simulation ends. Don't go broke!</p>
+      </div>
+
+      <div class="htp-slide">
+        <div class="htp-slide-icon">📅</div>
+        <h2>The Game Loop</h2>
+        <p>Each click of <strong>Next Day →</strong> advances one trading day. Charts update, prices change, and your portfolio shifts in real time.</p>
+        <p>Use <strong>⏩ Skip Days</strong> to jump multiple days at once — great for holding through a trend. You'll receive a full report of everything that happened.</p>
+      </div>
+
+      <div class="htp-slide">
+        <div class="htp-slide-icon">💰</div>
+        <h2>Buying &amp; Selling</h2>
+        <p><strong>BUY</strong> — Purchase shares. Profit when the price rises above your average cost.</p>
+        <p><strong>SELL</strong> — Close a long position. Profit or loss is realized and added to your cash balance.</p>
+        <p>Use the <strong>Max</strong> button to automatically fill the maximum affordable quantity.</p>
+      </div>
+
+      <div class="htp-slide">
+        <div class="htp-slide-icon">📉</div>
+        <h2>Short Selling</h2>
+        <p><strong>SHORT</strong> — Bet that a stock will fall. You borrow shares and sell them, keeping collateral. Profit when you buy back cheaper.</p>
+        <p><strong>COVER</strong> — Close a short position. If the price dropped, you profit. If it rose, you lose.</p>
+        <p>⚠️ Shorts require full cash collateral equal to the position value.</p>
+      </div>
+
+      <div class="htp-slide">
+        <div class="htp-slide-icon">🧩</div>
+        <h2>Charts &amp; Portfolio</h2>
+        <p>The <strong>left panel</strong> shows your open positions. <strong>Click any position</strong> to instantly load its chart and fill the trade form.</p>
+        <p>The <strong>centre chart</strong> shows candlestick price history — capped at the current in-game date. No peeking ahead!</p>
+        <p>The <strong>watchlist bar</strong> below the chart lets you track multiple tickers side by side.</p>
+      </div>
+
+      <div class="htp-slide">
+        <div class="htp-slide-icon">🏁</div>
+        <h2>Winning &amp; Losing</h2>
+        <p>The simulation ends when you reach the <strong>end date</strong> you selected, or your <strong>total portfolio value hits $0</strong>.</p>
+        <p>At the end you get a full report: grade, best &amp; worst trades, win rate, and total return.</p>
+        <div class="htp-shortcuts">
+          <div class="htp-sc-row"><kbd>Space</kbd><span>Advance one trading day</span></div>
+          <div class="htp-sc-row"><kbd>F</kbd><span>Open fast-forward dialog</span></div>
+          <div class="htp-sc-row"><kbd>?</kbd><span>Open this help screen</span></div>
+        </div>
+      </div>
+
+    </div>
+    <div class="htp-nav">
+      <button class="htp-nav-btn" id="htpPrev">← Prev</button>
+      <div class="htp-dots" id="htpDots"></div>
+      <button class="htp-nav-btn" id="htpNext">Next →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════ MID-GAME SUMMARY MODAL -->
+<div class="modal-overlay" id="summaryModal">
+  <div class="modal summary-modal">
+    <button class="modal-close" id="summaryModalClose">✕</button>
+    <h2 class="modal-title">📊 Current Performance</h2>
+    <div id="summaryModalContent" class="summary-modal-content"></div>
+  </div>
+</div>
+
+<!-- Toast notification -->
+<div class="toast" id="toast"></div>
+
+<script src="utils/format.js"></script>
+<script src="utils/api.js"></script>
+<script src="components/chart.js"></script>
+<script src="components/portfolio.js"></script>
+<script src="components/trading.js"></script>
+<script src="components/fastforward.js"></script>
+<script src="components/howtoplay.js"></script>
+<script src="components/summarychart.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
