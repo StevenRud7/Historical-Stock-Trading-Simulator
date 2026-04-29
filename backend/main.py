@@ -30,8 +30,9 @@ app.include_router(portfolio.router)
 app.include_router(simulation.router)
 
 # ── Frontend static files ─────────────────────────────────────────
-# Resolve to stock-trader-sim/frontend/ regardless of cwd
-FRONTEND_DIR = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "frontend"))
+# Priority: FRONTEND_DIR env var (set in Docker/Render) → ../frontend (local dev)
+_default_frontend = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "frontend"))
+FRONTEND_DIR = os.environ.get("FRONTEND_DIR", _default_frontend)
 
 if os.path.exists(FRONTEND_DIR):
     @app.get("/")
