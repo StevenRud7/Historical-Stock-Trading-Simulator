@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: market-replay
+    name: Historical-Stock-Trading-Simulator
     runtime: python
     rootDir: backend
     buildCommand: pip install --upgrade pip && pip install --prefer-binary -r requirements.txt
