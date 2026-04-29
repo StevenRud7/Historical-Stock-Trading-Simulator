@@ -2,8 +2,8 @@ fastapi==0.111.0
 uvicorn==0.29.0
 anyio==4.4.0
 sqlalchemy==2.0.30
-pandas==2.2.2
-numpy==1.26.4
+# pandas==2.2.2
+# numpy==1.26.4
 yfinance==0.2.37
 requests==2.31.0
 python-multipart==0.0.9
