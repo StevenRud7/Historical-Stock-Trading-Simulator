@@ -3,9 +3,8 @@ services:
     name: Historical-Stock-Trading-Simulator
     runtime: python
     rootDir: backend
-    buildCommand: pip install --upgrade pip && pip install --prefer-binary -r requirements.txt
-    startCommand: python -m uvicorn main:app --host 0.0.0.0 --port $PORT
+    buildCommand: pip install --upgrade pip && pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: PYTHON_VERSION
-        value: 3.11.0
-    autoDeploy: true
+        value: 3.11
