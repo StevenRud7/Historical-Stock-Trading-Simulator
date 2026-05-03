@@ -4,7 +4,7 @@
 
 MarketReplay is a full-stack web application built with a **Python FastAPI backend** and a **vanilla JavaScript single-page frontend**. It fetches real OHLCV (Open/High/Low/Close/Volume) data from Yahoo Finance, caches it in SQLite, and runs a financially accurate portfolio simulation complete with average cost basis tracking, short selling, fast-forward simulation, and a comprehensive end-of-game performance summary with annotated trade charts.
 
-### Web Link: https://historical-stock-trading-simulator.onrender.com/
+### Web Link: https://historical-stock-trading-simulator.onrender.com
 
 ---
 
